@@ -316,7 +316,7 @@
                
     }
     
-## HTTP 요청 데이터 - 개요
+# HTTP 요청 데이터 - 개요
 - **GET- 쿼리 파라미터**
   - /url?username=hello&age=20
   - 메세지 바디 없이, URL의 쿼리 파라미터에 데이터를 포함해서 전달
@@ -329,3 +329,5 @@
   - HTTP API에서 주로 사용, JSON, XML, TEXT
 - 데이터 형식은 주로 JSON 사용
   - POST, PUT, PATCH
+
+# HTTP 

@@ -434,3 +434,65 @@
             resp.getWriter().write("ok");
         }
     }
+
+- JSON 결과를 파싱해서 사용할 수 이쓴ㄴ 자바 객체로 변환하려면 Jackson, Gson 같은 JSON 변환 라이브러리 를 추가해서 사용
+- 스프링 부트로 Spring MVC 사용시 기본으로 Jackson 라이브러리를 사용
+
+# HttpServletResponse - 기본 사용법
+- HTTP 응답 메세지 생성
+  - HTTP 응답코드 지정
+  - 헤더 생성
+  - 바디 생성
+
+**ResponseHeaderServlet**
+
+    @WebServlet(name = "ResponseHeaderServlet", urlPatterns = "/response-header")
+    public class ResponseHeaderServlet extends HttpServlet {
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            resp.setStatus(HttpServletResponse.SC_OK);
+
+            resp.setHeader("Content-Type", "text/plain;charset=utf-8");
+            resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            resp.setHeader("Pragma", "no-cache");
+            resp.setHeader("my-header", "hello");
+
+        content(resp);
+        cookie(resp);
+        redirect(resp);
+
+        PrintWriter writer = resp.getWriter();
+        writer.println("안녕하세요");
+    }
+
+**Content 편의 메서드**
+
+    private void content(HttpServletResponse response) {
+
+        response.setContentType("text/plain");
+        response.setCharacterEncoding("utf-8");
+        //response.setContentLength(2); //(생략시 자동 생성)
+    }
+
+**쿠키 편의 메서드**
+
+    private void cookie(HttpServletResponse response) {
+        //Set-Cookie: myCookie=good; Max-Age=600;
+        //response.setHeader("Set-Cookie", "myCookie=good; Max-Age=600");
+        Cookie cookie = new Cookie("myCookie", "good");
+        cookie.setMaxAge(600); //600초
+        response.addCookie(cookie);
+    }
+
+**redirect 편의 메서드**
+
+    private void redirect(HttpServletResponse response) throws IOException {
+        //Status Code 302
+        //Location: /basic/hello-form.html
+	
+        //response.setStatus(HttpServletResponse.SC_FOUND); //302
+        //response.setHeader("Location", "/basic/hello-form.html");
+        response.sendRedirect("/basic/hello-form.html");
+    }

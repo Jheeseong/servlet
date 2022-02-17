@@ -383,3 +383,54 @@
   - 클라이언트에서 서버로 데이터 전달 시 HTTP 메세지 바디를 사용하지 않기 떄문에 Content-type이 X
 - POST HTML Form 형식
   - 데이터 전달 시 HTTP 메세지 바디에 해당 데이터를 포함하여 전송하기 떄문에 바디에 포함된 데이터가 어떤 형식인지 content-type을 꼭 지정!!
+
+# v1.3 2/17
+# HTTP 요청 데이터 - API 메세지 바디 - 단순 텍스트
+- HTTP Message Body에 데이터를 직접 담아서 요청
+  - HTTP API 에서 주로 사용, JSON, XML, TEXT
+  - 데이터 형식은 주로 JSON 사용
+  - POST, PUT, PATCH
+
+**RequestBodyStringServlet**
+
+    @WebServlet(name = "RequestBodyStringServlet", urlPatterns = "/request-body-string")
+    public class RequestBodyStringServlet extends HttpServlet {
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            ServletInputStream inputStream = req.getInputStream();
+            String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+            System.out.println("messageBody = " + messageBody);
+
+            resp.getWriter().write("ok");
+        }
+    }
+    
+# HTTP 요청 데이터 - API 메세지 바디 - JSON
+- JSON 형식 전송
+  - content -type : application/json
+  - message body : {"username": "hello:, "age": 20}
+  - 결과 : messageBody = {"username": "hello", "age": 20}
+
+**RequestBoddyJsonServlet**
+
+    @WebServlet(name = "RequestBodyJsonServlet", urlPatterns = "/request-body-json")
+    public class RequestBodyJsonServlet extends HttpServlet {
+
+        private ObjectMapper objectMapper = new ObjectMapper();
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            ServletInputStream inputStream = req.getInputStream();
+            String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+            System.out.println("messageBody = " + messageBody);
+
+            HelloData helloData = objectMapper.readValue(messageBody, HelloData.class);
+
+            System.out.println("helloData.getUsername() = " + helloData.getUsername());
+            System.out.println("helloData.getAge() = " + helloData.getAge());
+
+            resp.getWriter().write("ok");
+        }
+    }

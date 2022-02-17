@@ -316,7 +316,7 @@
                
     }
     
-## HTTP 요청 데이터 - 개요
+# HTTP 요청 데이터 - 개요
 - **GET- 쿼리 파라미터**
   - /url?username=hello&age=20
   - 메세지 바디 없이, URL의 쿼리 파라미터에 데이터를 포함해서 전달
@@ -329,3 +329,57 @@
   - HTTP API에서 주로 사용, JSON, XML, TEXT
 - 데이터 형식은 주로 JSON 사용
   - POST, PUT, PATCH
+
+# v1.2 2/16
+# HTTP 요청 데이터 - GET 쿼리 파라미터
+- 쿼리 파라미터는 URL에 ?를 시작으로 보낼 수 있음. 추가 파라미터는 &로 구분 가능
+  - ex) http://localhost:8080/request-param?username=hello&age=20
+- 서버에서는 HttpServletRequest가 제공하는 다음 메서드를 통해 쿼리 파라미터를 편하게 조회 가능
+
+      @WebServlet(name = "requestParamServlet", urlPatterns = "/request-param")
+      public class RequestParamServlet extends HttpServlet {
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            System.out.println("RequestParamServlet.service");
+
+            System.out.println("[전체 파라미터 조회] - start");
+            req.getParameterNames().asIterator()
+                    .forEachRemaining(paramName -> System.out.println(paramName + "= " + req.getParameter(paramName)));
+            System.out.println("[전체 파라미터 조회] - end");
+
+            System.out.println("[단일 파라미터 조회]");
+            String username = req.getParameter("username");
+            String age = req.getParameter("age");
+
+            System.out.println("age = " + age);
+            System.out.println("username = " + username);
+
+            System.out.println("[이름이 같은 복수 파라미터 조회]");
+            String[] usernames = req.getParameterValues("username");
+            for (String s : usernames) {
+                System.out.println("s = " + s);
+            }
+
+            resp.getWriter().write("ok");
+         }
+	}
+	
+- **복수 파라미터에서 단일 파라미터 조회**
+  - 하나의 파라미터 이름에는 request.getParameter()을 사용
+  - 복수의 파라미터 이름에는 request.getParameterValues()를 사용
+  - 복수일 때 request.getParameter()을 사용 시 첫 번쨰 값이 반환
+
+# HTTP 요청 데이터 - POST HTML Form
+- content type : appllacation/x-www-form-urlencoded
+- 메세지 바디에 쿼리 파라미터 형식으로 데이터를 전달 - username=helle&age=20
+- **application/x-www.form-urlencoded 형식**
+  - GET에서 사용한 쿼리 파라미터 형식과 같음, 따라서 쿼리 파라미터 조회 메서드를 그대로 사용
+  - request.getParameter()로 편리하게 구분없ㄷ이 조회 가능
+  -> request.getParameter()는 GET 형식과 POST HTML form 형식 둘 다 지원.
+  
+##  GET 쿼리 파라미터 형식과 POST HTML Form 형식 비교
+- GET 쿼리 파라미터 형식
+  - 클라이언트에서 서버로 데이터 전달 시 HTTP 메세지 바디를 사용하지 않기 떄문에 Content-type이 X
+- POST HTML Form 형식
+  - 데이터 전달 시 HTTP 메세지 바디에 해당 데이터를 포함하여 전송하기 떄문에 바디에 포함된 데이터가 어떤 형식인지 content-type을 꼭 지정!!

@@ -496,3 +496,53 @@
         //response.setHeader("Location", "/basic/hello-form.html");
         response.sendRedirect("/basic/hello-form.html");
     }
+
+# v1.4 2/18
+# HTTP 응답 데이터 - 단순 텍스트, HTML
+## HttpServletResponse - HTML 응답
+**ResponseHtmlServlet**
+    
+    @WebServlet(name = "ResponseHtmlServlet", urlPatterns = ("/response-html"))
+    public class ResponseHtmlServlet extends HttpServlet {
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            resp.setContentType("text/html");
+            resp.setCharacterEncoding("utf-8");
+
+            PrintWriter writer = resp.getWriter();
+            writer.println("<html>");
+            writer.println("<body>");
+            writer.println("  <div>안녕?</div>");
+            writer.println("</body>");
+            writer.println("</html>");
+        }
+    }
+    
+- HTTP 응답으로 HTML을 반환할 시 content-type을 text/html로 지정
+- 페이지 소스보기 사용 시 결과 HTML을 println 한 것과 동일하게 확인 가능.
+
+# HTTP 응답 데이터 - API JSON
+**ResponseJsonServlet**
+
+    @WebServlet(name = "ResponseJsonServlet", urlPatterns = ("/response-json"))
+    public class ResponseJsonServlet extends HttpServlet {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            resp.setContentType("application/json");
+            resp.setCharacterEncoding("utf-8");
+
+            HelloData helloData = new HelloData();
+            helloData.setUsername("kim");
+            helloData.setAge(20);
+
+            String result = objectMapper.writeValueAsString(helloData);
+            resp.getWriter().write(result);
+        }
+    }
+    
+- HTTP 응답으로 JSON을 반환 할 때 content-type은 application/json으로 지정
+- objectMapper.writeValueAsString() 사용 시 객체를 JSON 문자로 변경 가능.

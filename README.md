@@ -546,3 +546,113 @@
     
 - HTTP 응답으로 JSON을 반환 할 때 content-type은 application/json으로 지정
 - objectMapper.writeValueAsString() 사용 시 객체를 JSON 문자로 변경 가능.
+
+# v1.5 2/19
+# 서블릿을 통한 웹 애플리케이션
+**MemberFormServlet**
+
+    @WebServlet(name = "memberFormServlet", urlPatterns = "/servlet/members/new=form")
+    public class MemberServletForm extends HttpServlet {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            resp.setContentType("text/html");
+            resp.setCharacterEncoding("utf-8");
+
+            PrintWriter w = resp.getWriter();
+            w.write("<!DOCTYPE html>\n" +
+                "<html>\n" +
+                "<head>\n" +
+		
+                ....
+		
+                "</html>\n");
+	}
+    }
+    
+- MemberFormServlet은 회원 정보 입력이 가능한 HTML Form을 만들어서 응답.
+- 자바코드를 통한 HTML 제공
+
+**MemberSaveServlet**
+
+    @WebServlet(name = "memberSaveServlet", urlPatterns = "/servlet/members/save")
+    public class MemberSaveServlet extends HttpServlet {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            System.out.println("MemberSaveServlet.service");
+            String username = req.getParameter("username");
+            int age = Integer.parseInt(req.getParameter("age"));
+
+            Member member = new Member(username, age);
+            System.out.println("member = " + member);
+            memberRepository.save(member);
+
+            resp.setContentType("text/html");
+            resp.setCharacterEncoding("utf-8");
+
+            PrintWriter w = resp.getWriter();
+            w.write("<html>\n" +
+                "<head>\n" +
+		
+                ....
+		
+                "</html>");
+        }
+    }
+    
+- MemberSaveServlet 순서
+  - 1.파라미터 조회 후 Member 객체 생성
+  - 2.Member 객체를 MemberRepository를 통해 저장
+  - 3.Member 객체를 사용해 HTML 동적 화면을 만들어서 응답
+
+**MemberListServlet**
+
+    @WebServlet(name = "MemberListServlet", urlPatterns = "/servlet/members")
+    public class MemberListServlet extends HttpServlet {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            resp.setContentType("text/html");
+            resp.setCharacterEncoding("utf-8");
+
+            List<Member> members = memberRepository.findAll();
+
+            PrintWriter w = resp.getWriter();
+
+            w.write("<html>");
+	    
+	    ....
+	    
+            w.write(" <tbody>");
+
+            for (Member member : members) {
+                w.write(" <tr>");
+                w.write(" <td>" + member.getId() + "</td>");
+                w.write(" <td>" + member.getUsername() + "</td>");
+                w.write(" <td>" + member.getAge() + "</td>");
+                w.write(" </tr>");
+            }
+            w.write(" </tbody>");
+            w.write("</table>"); w.write("</body>");
+            w.write("</html>");
+        }
+    }
+    
+- MemberListServlet 순서
+  - 1.memberRepository.findAll()을 통해 모든 회원 조회
+  - 2.For 루프를 통해 외원 수만큼 동적으로 HTML에 생성 및 응답
+
+**HTML을 통한 웹 애플리케이션 단점**
+- 서블릿과 자바 코드만으로 HTML을 만들어 복잡, 비효율적 -> 자바 코드를 통해 HTML 코드를 작성해야하기 때문
+- 차라리 HTML 문서에 동적 변경이 필요한 부분만 자바 코드를 넣는다면 더 효율적이고 편리
+- 이 부분 문제 해결을 위해 템플릿 엔진(JSP, Thymeleaf, Freemarker, velocity)이 나오게 됨.

@@ -649,8 +649,8 @@
     }
     
 - MemberListServlet 순서
-  - memberRepository.findAll()을 통해 모든 회원 조회
-  - For 루프를 통해 외원 수만큼 동적으로 HTML에 생성 및 응답
+  - 1.memberRepository.findAll()을 통해 모든 회원 조회
+  - 2.For 루프를 통해 외원 수만큼 동적으로 HTML에 생성 및 응답
 
 **HTML을 통한 웹 애플리케이션 단점**
 - 서블릿과 자바 코드만으로 HTML을 만들어 복잡, 비효율적 -> 자바 코드를 통해 HTML 코드를 작성해야하기 때문

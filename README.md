@@ -656,3 +656,94 @@
 - 서블릿과 자바 코드만으로 HTML을 만들어 복잡, 비효율적 -> 자바 코드를 통해 HTML 코드를 작성해야하기 때문
 - 차라리 HTML 문서에 동적 변경이 필요한 부분만 자바 코드를 넣는다면 더 효율적이고 편리
 - 이 부분 문제 해결을 위해 템플릿 엔진(JSP, Thymeleaf, Freemarker, velocity)이 나오게 됨.
+
+# v1.6 2/20
+# JSP를 통한 웹 애플리케이션 개발
+**build.gradle에 추가**
+
+    implementation 'org.apache.tomcat.embed:tomcat-embed-jasper'
+    implementation 'javax.servlet:jstl'
+    
+**new-form,jsp - 멤버 등록 폼**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <html>
+    <head>
+      <title>Title</title>
+    </head>
+    <body>
+    <form action="/jsp/members/save.jsp" method="post">
+     username: <input type="text" name="username" />
+     age: <input type="text" name="age" />
+     <button type="submit">전송</button>
+    </form>
+    </body>
+    </html>
+
+- <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+  - JSP 문서 선언 후 JSP 문서 작성 시작
+- 서버 내부에서 서블릿으로 변환하여 이전의 memberFormServlet과 유사한 모습으로 변환
+
+**save,jsp - 회원 저장**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ page import="hello.servlet.basic.member.Member" %>
+    <%@ page import="hello.servlet.basic.member.MemberRepository" %>
+    <%
+        //request, response 사용 가능
+        MemberRepository memberRepository = MemberRepository.getInstance();
+
+        System.out.println("MemberSaveServlet.service");
+        String username = request.getParameter("username");
+        int age = Integer.parseInt(request.getParameter("age"));
+
+        Member member = new Member(username, age);
+        memberRepository.save(member);
+
+    %>
+    <html>
+     ....
+    <ul>
+        <li>id=<%=member.getId()%></li>
+        <li>username=<%=member.getUsername()%></li>
+        <li>age=<%=member.getAge()%></li>
+    </ul>
+    ....
+    </html>
+
+- JSP는 자바 코드를 그래도 사용 가능
+- <%@ page import="hello.servlet.domain.member.MemberRepository" %>
+  - JAVA의 import문과 동일
+- <% ~~ %>
+  - JAVA 코드 입력 및 출력 가능
+- JSP는 서블릿 코드와 동일하나, HTML을 중심으로 설계 후, 자바 코드를 부분 입력.
+
+**members.jsp - 회원 목록**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ page import="hello.servlet.basic.member.Member" %>
+    <%@ page import="hello.servlet.basic.member.MemberRepository" %>
+    <%@ page import="java.util.List" %>
+    <%
+     MemberRepository memberRepository = MemberRepository.getInstance();
+     List<Member> members = memberRepository.findAll();
+    %>
+    <html>
+    ....
+     <tbody>
+    <%
+     for (Member member : members) {
+     out.write(" <tr>");
+     out.write(" <td>" + member.getId() + "</td>");
+     out.write(" <td>" + member.getUsername() + "</td>");
+     out.write(" <td>" + member.getAge() + "</td>");
+     out.write(" </tr>");
+     }
+    %>
+    ....
+    </html>
+    
+
+- 회원 리포지토리를 조회 후, List를 사용하여 <tr><td>HTML 태그를 반복해서 출력 중
+	
+## 서블릿과 JSP의 한계

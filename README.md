@@ -656,3 +656,212 @@
 - 서블릿과 자바 코드만으로 HTML을 만들어 복잡, 비효율적 -> 자바 코드를 통해 HTML 코드를 작성해야하기 때문
 - 차라리 HTML 문서에 동적 변경이 필요한 부분만 자바 코드를 넣는다면 더 효율적이고 편리
 - 이 부분 문제 해결을 위해 템플릿 엔진(JSP, Thymeleaf, Freemarker, velocity)이 나오게 됨.
+
+# v1.6 2/20
+# JSP를 통한 웹 애플리케이션 개발
+**build.gradle에 추가**
+
+    implementation 'org.apache.tomcat.embed:tomcat-embed-jasper'
+    implementation 'javax.servlet:jstl'
+    
+**new-form,jsp - 멤버 등록 폼**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <html>
+    <head>
+      <title>Title</title>
+    </head>
+    <body>
+    <form action="/jsp/members/save.jsp" method="post">
+     username: <input type="text" name="username" />
+     age: <input type="text" name="age" />
+     <button type="submit">전송</button>
+    </form>
+    </body>
+    </html>
+
+- <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+  - JSP 문서 선언 후 JSP 문서 작성 시작
+- 서버 내부에서 서블릿으로 변환하여 이전의 memberFormServlet과 유사한 모습으로 변환
+
+**save,jsp - 회원 저장**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ page import="hello.servlet.basic.member.Member" %>
+    <%@ page import="hello.servlet.basic.member.MemberRepository" %>
+    <%
+        //request, response 사용 가능
+        MemberRepository memberRepository = MemberRepository.getInstance();
+
+        System.out.println("MemberSaveServlet.service");
+        String username = request.getParameter("username");
+        int age = Integer.parseInt(request.getParameter("age"));
+
+        Member member = new Member(username, age);
+        memberRepository.save(member);
+
+    %>
+    <html>
+     ....
+    <ul>
+        <li>id=<%=member.getId()%></li>
+        <li>username=<%=member.getUsername()%></li>
+        <li>age=<%=member.getAge()%></li>
+    </ul>
+    ....
+    </html>
+
+- JSP는 자바 코드를 그래도 사용 가능
+- <%@ page import="hello.servlet.domain.member.MemberRepository" %>
+  - JAVA의 import문과 동일
+- <% ~~ %>
+  - JAVA 코드 입력 및 출력 가능
+- JSP는 서블릿 코드와 동일하나, HTML을 중심으로 설계 후, 자바 코드를 부분 입력.
+
+**members.jsp - 회원 목록**
+
+    <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ page import="hello.servlet.basic.member.Member" %>
+    <%@ page import="hello.servlet.basic.member.MemberRepository" %>
+    <%@ page import="java.util.List" %>
+    <%
+     MemberRepository memberRepository = MemberRepository.getInstance();
+     List<Member> members = memberRepository.findAll();
+    %>
+    <html>
+    ....
+     <tbody>
+    <%
+     for (Member member : members) {
+     out.write(" <tr>");
+     out.write(" <td>" + member.getId() + "</td>");
+     out.write(" <td>" + member.getUsername() + "</td>");
+     out.write(" <td>" + member.getAge() + "</td>");
+     out.write(" </tr>");
+     }
+     %>
+     ....
+     </html>
+
+## 서블릿과 JSP의 한계
+- 서블릿
+  - 뷰(view) 화면을 위한 HTML을 만드는 작업이 복잡, 비효율적
+- JSP
+  - 뷰(view)를 생성하는 HTML 작업 및 부분 자바 코드 작성은 간단, 효율적.
+- 그러나, JSP의 상위 절반 코드는 비지니스 로직, 나머지 코드는 뷰(view) 화면을 위한 HTML 코드.
+- 비지니스 로직과 뷰 코드는 분리가 필요.
+- **MVC 패턴 등장**
+  - MVC 패턴을 통해 비지니스 로직과 뷰 코드를 분리 시켜 JSP는 뷰(view) 화면에만 집중.
+
+
+# v1.7 2/21
+# MVC 패턴 - 개요
+- 역할 분리
+  - 하나의 서블릿 혹은 JSP가 비지니스 로직과 뷰 렌더링까지 모두 처리 시, 많은 역할을 하게 되고 결과적으로 유지보수가 어려움
+  - UI를 변경할 경우, 비지니스 로직이 함께 있는 파일을 수정해야 함
+- 변경의 라이프 사이클
+  - 둘 사이의 변경 라이프 사이클이 다름. 예를 들어 UI를 일부 수정하는 일과 비지니스 로직을 수정하는 일은 각각 다르게 발생할 가능성이 높고 서로 영향을 주지 않음.
+  - 서로 라이프 사이클이 다를 시 유지 보수가 어려움
+- 기능 특화
+  - JSP 같은 뷰 템플릿은 화면 렌더링에 특화 되어 있기 떄문에 업무를 분리해 주는 것이 효과적
+- Model View Contoroller
+  - 컨트롤러(contoroller)와 뷰(view) 영역을 나눠서 설계
+  - 컨트롤러(Controller) : HTTP 요청을 받아서 파라미터를 검증하고, 비지니스 로직을 실행. 그 후 뷰에 전달할 결과 데이터를 조회해서 모델에 전송
+  - 모델(Model) : 뷰에 출력할 데이터를 담아둠. 뷰가 필요한 데이터를 모두 모델에 담아 전달해주는 역할을 하며, 뷰와 역할을 분리함
+  - 뷰(View) : 모델에 담긴 데이터를 이용하여 화면에 렌더링. 대부분 HTML을 생성하는 부분
+
+![image](https://user-images.githubusercontent.com/96407257/154931174-b60ca4e4-82ba-47a6-be0e-0d860c812356.png)
+
+# MVC 패턴 - 적용
+**MvcMemberFormServlet - 회원 등록 폼(컨트롤러)**
+
+    @WebServlet(name = "MvcMemberFormServlet", urlPatterns = "/servlet-mvc/members/new-form")
+    public class MvcMemberFormServlet extends HttpServlet {
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            String viewPath = "/WEB-INF/views/new-form.jsp";
+            RequestDispatcher dispatcher = req.getRequestDispatcher(viewPath);
+            dispatcher.forward(req,resp);
+        }
+    }
+    
+- Model은 HttpServletRequest 객체를 사용.
+- request는 내부에 데이터 저장소를 가지고 있고, requset.setAttribute(), request.getAttribute()를 사용 시 데이터를 보관 및 조회가 가능
+- /WEB-INF 결로 안에 JSP가 있을 시 외부에서 직접 JSP를 호출 불가능
+- redirect vs forward
+  - 리다이렉트는 실제 클라이언트에 응답이 나갔다가, 클라이언트가 redirect경로로 다시 요청하기 때문에 클라이언트가 인지가 가능하며, URL 결로도 실제로 변경
+  - 포워드는 서버 내부에서 일어나는 호출로 클라이언트가 인지 불가능
+- JSP에서 form의 action은 상대 경로로 설정. 상대 경로 설정 시 현재 URL이 속한 계층 경로 _ save가 호출
+
+**MvcMemberSaveServlet - 회원 저장(컨트롤러)**
+
+    @WebServlet(name = "MvcMemberSaveServlet", urlPatterns = "/servlet-mvc/members/save")
+    public class MvcMemberSaveServlet extends HttpServlet {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            String username = req.getParameter("username");
+            int age = Integer.parseInt(req.getParameter("age"));
+
+            Member member = new Member(username, age);
+            System.out.println("member = " + member);
+            memberRepository.save(member);
+
+            req.setAttribute("member", member);
+
+            String viewPath = "/WEB-INF/views/save-result.jsp";
+            RequestDispatcher dispatcher = req.getRequestDispatcher(viewPath);
+            dispatcher.forward(req,resp);
+
+        }
+    }
+    
+- HttpServletRequest를 Model로 사용
+- request가 제공하는 setAttribute() 사용 시 requst 객체에 데이터를 보관하여 뷰에 전달
+- 뷰는 request.getAttribute()를 사용하여 데이터를 이용
+
+**MvcMemberListServlet - 회원 목록 조회(컨트롤러)**
+
+    @WebServlet(name = "MvcMemberListServlet", urlPatterns = "/servlet-mvc/members")
+    public class MvcMemberListServlet extends HttpServlet {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            System.out.println("MvcMemberListServlet.service");
+            List<Member> members = memberRepository.findAll();
+
+            req.setAttribute("members", members);
+
+            String viewPath = "/WEB-INF/views/members.jsp";
+            RequestDispatcher dispatcher = req.getRequestDispatcher(viewPath);
+            dispatcher.forward(req,resp);
+         }
+     }
+     
+- request 객체를 사용하여 members를 모델에 보관
+
+# MVC 패턴 - 한계
+- 포워드 중복
+  - view로 이동하는 코드가 항상 중복 호출 됨. 메서드를 공통화해도 되지만 해당 메서드로 항상 직접 호출이 필요
+       
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request, response);
+        
+- ViewPath 중복
+  - /WEB-INF/views/ 가 계속해서 중복
+  - 그리고 JSP 가 아닌 다른 뷰로 변경 시 전체 코드 변경이 필요
+- 사용하지 않는 코드
+  - request는 사용하지만, response 코드는 사용되지 않음
+- 공통 처리의 어려움
+  - 기능이 복잡할수록 컨트롤러에서 공통으로 처리해야 하는 부분이 증가.
+- 해결점
+  - 컨트롤러 호출 전에 먼저 공통 기능 처리가 필요.
+  - 프론트 컨트롤러(front controller)패턴을 통해 문제를 해결 가능.
+  - 스프링 MVC 역시 프론트 컨트롤러 패턴을 사용하여 해결.

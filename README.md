@@ -919,6 +919,6 @@
         }
     }
     
-- urlpatterns = "/front-controller/v1/" : "/front-controller/v1" 를 포함한 하위 모든 요청을 서블릿에서 받아들임
-- Map<String, ControllerV1> controllerMap : String 은 매핑 URL, Value : 호출될 컨트롤러
-- service() : 먼저 requestURI를 초회해서 실제 호출될 컨트롤러를 contorollerMap에서 찾음 -> 없을 시 404 상태 코드 반환 -> 컨트롤러를 찾은 후 controller.process(request,response)를 호출하여 해당 컨트롤러를 실행
+- **urlpatterns** = "/front-controller/v1/" : "/front-controller/v1" 를 포함한 하위 모든 요청을 서블릿에서 받아들임
+- **Map<String, ControllerV1> controllerMap** : String 은 매핑 URL, Value : 호출될 컨트롤러
+- **service()** : 먼저 requestURI를 초회해서 실제 호출될 컨트롤러를 contorollerMap에서 찾음 -> 없을 시 404 상태 코드 반환 -> 컨트롤러를 찾은 후 controller.process(request,response)를 호출하여 해당 컨트롤러를 실행

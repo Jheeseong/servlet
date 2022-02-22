@@ -865,3 +865,60 @@
   - 컨트롤러 호출 전에 먼저 공통 기능 처리가 필요.
   - 프론트 컨트롤러(front controller)패턴을 통해 문제를 해결 가능.
   - 스프링 MVC 역시 프론트 컨트롤러 패턴을 사용하여 해결.
+
+# v1.8 2/22
+# 프론트 컨트롤러 패턴
+![image](https://user-images.githubusercontent.com/96407257/155145288-24ab5324-0f90-4db9-afc9-0f9895c88600.png)
+- 프론트 컨트롤러 서블릿 하나로 클라이언트의 요청을 수신
+- 프론트 컨트롤러가 요청에 맞는 컨트롤러를 찾아 호출
+- 공통 처리 가능
+- 프론트 컨트롤러를 제외한 컨트롤러는 서블릿을 사용 X
+- 스프링 웹 MVC 역시 **프론트 컨트롤러**이며, 스프링 웹 MVC의 DispatcherServlet 이 프론트 컨트롤러 패턴으로 구현
+
+# 프론트 컨트롤러 - V1
+![image](https://user-images.githubusercontent.com/96407257/155145846-b5893ec2-bea7-4125-a619-bfc5ad18fc0a.png)
+
+**ControllerV1**
+
+    public interface ControllerV1 {
+
+        void process(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException;
+    }
+    
+- 서블릿과 비슷한 모양의 컨트롤러 인터페이스를 도입.
+- 각 컨트롤러는 controller interface를 호출하며 로직의 일관성 성립 가능.
+
+- 내부 로직 **MemberFormControllerV1**, **MemberSaveControllerV1**, **MemberListControllerV1**을 생성
+    
+**FrontContorllerServletV1 - 프론트 컨트롤러**
+
+    @WebServlet(name = "frontControllerServletV1", urlPatterns = "/front-controller/v1/*")
+    public class FrontControllerServletV1 extends HttpServlet {
+
+        private Map<String, ControllerV1> controllerMap = new HashMap<>();
+
+        public FrontControllerServletV1() {
+            controllerMap.put("/front-controller/v1/members/new-form", new MemberFormControllerV1());
+            controllerMap.put("/front-controller/v1/members/save", new MemberSaveControllerV1());
+            controllerMap.put("/front-controller/v1/members", new MemberListControllerV1());
+        }
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            System.out.println("FrontControllerServletV1.service");
+            String requestURI = req.getRequestURI();
+
+            ControllerV1 controller = controllerMap.get(requestURI);
+            if (controller == null) {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            controller.process(req, resp);
+        }
+    }
+    
+- urlpatterns = "/front-controller/v1/" : "/front-controller/v1" 를 포함한 하위 모든 요청을 서블릿에서 받아들임
+- Map<String, ControllerV1> controllerMap : String 은 매핑 URL, Value : 호출될 컨트롤러
+- service() : 먼저 requestURI를 초회해서 실제 호출될 컨트롤러를 contorollerMap에서 찾음 -> 없을 시 404 상태 코드 반환 -> 컨트롤러를 찾은 후 controller.process(request,response)를 호출하여 해당 컨트롤러를 실행

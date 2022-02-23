@@ -922,3 +922,68 @@
 - **urlpatterns** = "/front-controller/v1/" : "/front-controller/v1" 를 포함한 하위 모든 요청을 서블릿에서 받아들임
 - **Map<String, ControllerV1> controllerMap** : String 은 매핑 URL, Value : 호출될 컨트롤러
 - **service()** : 먼저 requestURI를 초회해서 실제 호출될 컨트롤러를 contorollerMap에서 찾음 -> 없을 시 404 상태 코드 반환 -> 컨트롤러를 찾은 후 controller.process(request,response)를 호출하여 해당 컨트롤러를 실행
+
+# v1.8 2/22
+# 프론트 컨트롤러(View 분리) - V2
+![image](https://user-images.githubusercontent.com/96407257/155277685-b16dd9e2-a579-4f0c-896c-56daee7f487c.png)
+- 모든 컬트롤러에서 뷰로 이동하는 부분의 코드 중복을 제거
+
+**MyView**
+
+    public class MyView {
+
+        private String viewPath;
+
+        public MyView(String viewPath) {
+            this.viewPath = viewPath;
+        }
+
+        public void render(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            RequestDispatcher dispatcher = req.getRequestDispatcher(viewPath);
+            dispatcher.forward(req, resp);
+        }
+    }
+    
+**ControllerV2**
+
+    public interface ControllerV2 {
+
+        MyView process(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException;
+    }
+    
+**MemberFormControllerV2**, **MemberSaveControllerV2**, **MemberListControllerV2**
+- dispatcher.forward()를 MyView에 전가함으로서 코드 작성 필요가 없음.
+- 단순히 MyView 객체 생성 후 뷰 이름을 넣고 반환
+
+**FrontControllerServletV2**
+
+    @WebServlet(name = "frontControllerServletV2", urlPatterns = "/front-controller/v2/*")
+    public class FrontControllerServletV2 extends HttpServlet {
+
+        private Map<String, ControllerV2> controllerMap = new HashMap<>();
+
+        public FrontControllerServletV2() {
+            controllerMap.put("/front-controller/v2/members/new-form", new MemberFormControllerV2());
+            controllerMap.put("/front-controller/v2/members/save", new MemberSaveControllerV2());
+            controllerMap.put("/front-controller/v2/members", new MemberListControllerV2());
+        }
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            System.out.println("FrontControllerServletV2.service");
+            String requestURI = req.getRequestURI();
+
+            ControllerV2 controller = controllerMap.get(requestURI);
+            if (controller == null) {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            MyView view = controller.process(req, resp);
+            view.render(req,resp);
+        }
+    }
+    
+- ControllerV2의 반환 타입이 MyView이므로 프론트 컨트롤러는 MyView를 반환.
+- 그 후 view.render()를 호출하면 forward 로직을 수행하여 JSP를 실행.

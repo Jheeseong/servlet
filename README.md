@@ -988,7 +988,7 @@
 - ControllerV2의 반환 타입이 MyView이므로 프론트 컨트롤러는 MyView를 반환.
 - 그 후 view.render()를 호출하면 forward 로직을 수행하여 JSP를 실행.
 
-# v1.9 2/23
+# v1.10 2/24
 # 프론트 컨트롤러(Model 추가) - V3
 ![image](https://user-images.githubusercontent.com/96407257/155527682-6f08baac-d66f-49d8-81a9-a90df3a9a932.png)
 - 서블릿 종속성 제거
@@ -1109,3 +1109,77 @@
             model.forEach((key, value) -> req.setAttribute(key, value));
         }
     }
+
+# v1.11 2/25
+# 프론트 컨트롤러(단순, 실용적) - V4
+![image](https://user-images.githubusercontent.com/96407257/155648318-79797286-cd7d-43d0-a2c0-d8e963ba2a26.png)
+- 구조는 V3와 같으나, ModelView를 반환하지 않고, ViewName만 반환
+
+**ControllerV4**
+
+    public interface ControllerV4 {
+
+        String process(Map<String, String> paramMap, Map<String, Object> model);
+    }
+    
+- 인터페이스에 ModelView가 없고 뷰의 이름만 반환
+
+**MemberFormControllerV4**, **MemberSaveControllerV4**, **MemberListControllerV4**
+- 뷰의 논리 이름만 반환.
+- 모델을 직접 생성하지 않고, 파라미터로 전달
+  - model.put("member",member)
+
+**FrontControllerServletV4**
+
+    @WebServlet(name = "frontControllerServletV4", urlPatterns = "/front-controller/v4/*")
+    public class FrontControllerServletV4 extends HttpServlet {
+
+        private Map<String, ControllerV4> controllerMap = new HashMap<>();
+
+        public FrontControllerServletV4() {
+            controllerMap.put("/front-controller/v4/members/new-form", new MemberFormControllerV4());
+            controllerMap.put("/front-controller/v4/members/save", new MemberSaveControllerV4());
+            controllerMap.put("/front-controller/v4/members", new MemberListControllerV4());
+        }
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            System.out.println("FrontControllerServletV3.service");
+            String requestURI = req.getRequestURI();
+
+            ControllerV4 controller = controllerMap.get(requestURI);
+            if (controller == null) {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            Map<String, String> paramMap = CreateParamMap(req);
+            Map<String, Object> model = new HashMap<>();
+
+            String viewName = controller.process(paramMap, model);
+            MyView view = viewResolver(viewName);
+
+            view.render(model,req,resp);
+        }
+
+        private MyView viewResolver(String viewName) {
+            return new MyView("/WEB-INF/views/" + viewName + ".jsp");
+        }
+
+        private Map<String, String> CreateParamMap(HttpServletRequest req) {
+            Map<String, String> paramMap = new HashMap<>();
+            req.getParameterNames().asIterator()
+                    .forEachRemaining(paramName -> paramMap.put(paramName, req.getParameter(paramName)));
+
+            return paramMap;
+        }
+    }
+    
+- 모델 객체 전달
+  - Map<String, Object> model = new HashMap<>()
+  - 모델 객체를 프론트 컨트롤러에서 생성 후 넘김. 컨트롤러에서 모델 객체에 값을 담으면 여기에 담겨있게 됨.
+- 뷰 논리 이름을 직접 반환
+  - String viewName = controller.process(paramMap, model);  
+    Myview view = viewResolver(viewName);  
+- 기존 구조에서 모델을 파라미터로 넘기고, 뷰의 논리 이름을 반환하는 컨트롤러

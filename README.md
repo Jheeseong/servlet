@@ -1183,3 +1183,146 @@
   - String viewName = controller.process(paramMap, model);  
     Myview view = viewResolver(viewName);  
 - 기존 구조에서 모델을 파라미터로 넘기고, 뷰의 논리 이름을 반환하는 컨트롤러
+
+# v1.11 2/25
+# 프론트 컨트롤러(어뎁터 패턴) - V5
+![image](https://user-images.githubusercontent.com/96407257/155842811-f7b48510-0952-4d75-94df-c9f2c217e034.png)
+- 프론트 컨트롤러가 다양한 방식의 컨트롤러를 처리할 수 있도록 어댑터 역할을 해주는 패턴
+- 핸들러 어뎁터
+  - 어댑터와 비슷한 것으로 다양한 종류의 컨트롤러를 호출하도록 도와주는 역할
+- 핸들러
+  - 컨트롤러의 더 넓은 의미, 어댑터를 통해서 컨트롤러의 개념 분만 아니라 다양하게 해당되는 종류의 어뎁터를 모두 처리 가능하기 떄문
+
+**MyhandlerAdater**
+
+    public interface MyHandlerAdapter {
+
+        boolean supports(Object handler);
+
+        ModelView handler(HttpServletRequest req, HttpServletResponse resp, Object handler) throws ServletException, IOException;
+    }
+    
+- boolean supports(Object handler)
+  - handler는 컨트롤러를 의미
+  - 어탭터가 해당 컨트럴러를 처리할 수 있는지 판단하는 메서드
+- ModelView handle(httpservletRequest req, HttpServletResponse resp, Object handler)
+  - 어댑터는 실제 컨트롤러를 호출하고, 결과를 ModelView로 반환
+  - 실제 컨트롤러가 ModelView를 반환하지 못하면, 어댑터가 ModelView를 직접 생성해서라도 반환해야 함.
+  - 이전과 달리(프론트 컨트롤러가 컨트롤러를 호출) 이제는 어댑터를 통해 실제 컨트롤러를 호출.
+
+**ContorllerV3HandlerAdapter**
+
+    public class ControllerV3HandlerAdapter implements MyHandlerAdapter {
+    
+        //ControllerV3를 처리할 수 있는 어댑터
+        @Override
+        public boolean supports(Object handler) {
+            return (handler instanceof ControllerV3);
+        }
+
+        @Override
+        public ModelView handler(HttpServletRequest req, HttpServletResponse resp, Object handler) throws ServletException, IOException {
+	
+	    // hnadler를 컨트롤러 V3로 변환한 다음, V3 형식에 맞춰서 호출
+	    // supports()를 통해 ControllerV3만 지원하기 떄문에 타입 변환 걱정 없이 실행
+            ControllerV3 controller = (ControllerV3) handler;
+
+            Map<String, String> paramMap = createParamMap(req);
+            
+	    //ControllerV3는 ModelView를 반환하므로 그대로 ModelView를 반환
+            ModelView mv = controller.process(paramMap);
+            return mv;
+        }
+
+        private Map<String, String> createParamMap(HttpServletRequest req) {
+            Map<String, String> paramMap = new HashMap<>();
+            req.getParameterNames().asIterator()
+                    .forEachRemaining(paramName -> paramMap.put(paramName, req.getParameter(paramName)));
+            return paramMap;
+        }
+    }
+    
+**FrontCOntrollerServletV5**
+
+    @WebServlet(name = "frontControllerServletV5", urlPatterns = "/front-controller/v5/*")
+    public class FrontControllerServletV5 extends HttpServlet {
+
+        // 매핑 정보 - 매핑 정보 값이 ControllerV3, ControllerV4 같은 인터페이스에서 아무 값이나 받을 수 있는 Object로 변경
+        private final Map<String, Object> handlerMappingMap = new HashMap<>();
+        private final List<MyHandlerAdapter> handlerAdapters = new ArrayList<>();
+
+        // 생성자 - 핸틀러 매핑과 어댑터를 초기화
+        public FrontControllerServletV5() {
+            initHandlerMappingMap();
+            initHandlerAdapters();
+        }
+
+        private void initHandlerMappingMap() {
+            handlerMappingMap.put("/front-controller/v5/v3/members/new-form", new MemberFormControllerV3());
+            handlerMappingMap.put("/front-controller/v5/v3/members/save", new MemberSaveControllerV3());
+            handlerMappingMap.put("/front-controller/v5/v3/members", new MemberListControllerV3());
+
+            handlerMappingMap.put("/front-controller/v5/v4/members/new-form", new MemberFormControllerV4());
+            handlerMappingMap.put("/front-controller/v5/v4/members/save", new MemberSaveControllerV4());
+            handlerMappingMap.put("/front-controller/v5/v4/members", new MemberListControllerV4());
+        }
+
+        private void initHandlerAdapters() {
+            handlerAdapters.add(new ControllerV3HandlerAdapter());
+            handlerAdapters.add(new ControllerV4HandlerAdapter());
+        }
+
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            //핸들러 매핑 - handlerMappingMap에서 URL에 매핑된 핸들러(컨트롤러) 객체를 찾아서 반환
+            Object handler = getHandler(req);
+
+            if (handler == null) {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            //handler를 처리할 수 있는 어뎁터를 adapter.supports(handler)를 통해 찾음.
+	    // handler가 ControllerV3 인터페이스를 구현했다면, ControllerV3HandlerAdapter객체가 반환.
+            MyHandlerAdapter adapter = getHandlerAdapter(handler);
+	    //어뎁터 호출 - 어뎁터의 handle(req, resp, handler) 메서드를 통해 실제 어댑터가 호출
+	    //어뎁터는 handler(컨트롤러)를 호출하고 그 결과를 어뎁터를 반환.
+            ModelView mv = adapter.handler(req, resp, handler);
+
+            String viewName = mv.getViewName();
+            MyView view = viewResolver(viewName);
+
+            view.render(mv.getModel(),req,resp);
+        }
+
+        private MyHandlerAdapter getHandlerAdapter(Object handler) {
+            for (MyHandlerAdapter handlerAdapter : handlerAdapters) {
+                if (handlerAdapter.supports(handler)) {
+                    return handlerAdapter;
+                }
+            }
+            throw new IllegalStateException("handler adapter를 찾을 수 없습니다. + handler=" + handler);
+        }
+
+        private MyView viewResolver(String viewName) {
+            return new MyView("/WEB-INF/views/" + viewName + ".jsp");
+        }
+
+        private Map<String, String> CreateParamMap(HttpServletRequest req) {
+            Map<String, String> paramMap = new HashMap<>();
+            req.getParameterNames().asIterator()
+                    .forEachRemaining(paramName -> paramMap.put(paramName, req.getParameter(paramName)));
+
+            return paramMap;
+        }
+
+        private Object getHandler(HttpServletRequest req) {
+            System.out.println("FrontControllerServletV3.service");
+            String requestURI = req.getRequestURI();
+            Object handler = handlerMappingMap.get(requestURI);
+            return handler;
+        }
+    }
+
+- 

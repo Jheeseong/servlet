@@ -1184,7 +1184,7 @@
     Myview view = viewResolver(viewName);  
 - 기존 구조에서 모델을 파라미터로 넘기고, 뷰의 논리 이름을 반환하는 컨트롤러
 
-# v1.11 2/25
+# v1.12 2/26
 # 프론트 컨트롤러(어뎁터 패턴) - V5
 ![image](https://user-images.githubusercontent.com/96407257/155842811-f7b48510-0952-4d75-94df-c9f2c217e034.png)
 - 프론트 컨트롤러가 다양한 방식의 컨트롤러를 처리할 수 있도록 어댑터 역할을 해주는 패턴
@@ -1325,4 +1325,38 @@
         }
     }
 
-- 
+# v1.12 2/26
+# SpringMVC 전체 구조
+![image](https://user-images.githubusercontent.com/96407257/155884239-e74a5ff1-b03b-4e81-95df-27fd6cc40f6f.png)
+
+**동작 순서**
+1. 핸들러 조회 : 핸들러 매핑을 통해 요청 URL에 매핑된 핸들러(컨트롤러)를 조회
+2. 핸들러 어댑터 조회 : 핸들러를 실행할 수 있는 핸들러 어댑터를 조회
+3. 핸들러 어댑터 실행 : 핸들러 어댑터를 실행
+4. 핸들러(컨트롤러) 실행 : 핸들러 어댑터가 실제 핸들러를 실행
+5. ModelAndView 반환 : 핸들러 어댑터는 핸들러가 반환하는 정보를 ModelAndView로 변환하여 반환
+6. viewResolver 호출 : 뷰 리졸버를 찾고 실행
+7. View 반환 : 뷰 리졸버는 뷰의 논리 이름을 물리 이름으로 변경 후, 렌더링 역할을 하는 뷰 객체를 반환
+8. 뷰 렌더링 : 뷰를 통해서 뷰를 렌더링
+
+**직접 만든 프레임워크 -> 스프링MVC 비교**
+- FrontController -> DispatcherServlet
+- handlerMappingMap -> HandlerMapping
+- MyHandlerAdapter -> HandlerAdapter
+- ModelView -> ModelAndView
+- viewResolver -> ViewResolver
+- MyView -> View
+
+# DispatcherServlet
+- 스프링 MVC도 프론트 컨트롤러 패턴으로 구현
+- 스프링 MVC의 프론트 컨트롤러가 **DispatcherServlet**
+
+**DispacherServlet 서블릿 등록**
+- DispacherServlet도 부모 클래스에서 HttpServlet을 상속 받아서 사용하고, 서블릿으로 동작
+  - DispatcherServlet -> FrameWorkServlet -> HttpServletBean -> HttpServlet
+- 스프링 부트는 DispacherServlet을 서블릿으로 자동 등록하면서 모든 경로에 대해 매핑
+
+**DispatcherServlet 요청 흐름**
+- 서블릿이 호출되면 HttpServlet이 제공하는 service()가 호출
+- 스프링 MVC는 FrameworkServlet에서 service()를 오버라이드 해둠
+- FrameworkServlet.service()를 시작으로 여러 메서드가 호출되면서 DispacherServlet.doDispatch()가 호출

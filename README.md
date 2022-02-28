@@ -1446,4 +1446,4 @@
 4. 뷰 - InternalResourceView
   - InternalResourceView는 JSP처럼 forward()를 호출하여 처리할 경우 사용
 5. View.render()
-  - forward()를 사용하여 JSP를 
+  - forward()를 사용하여 JSP를 실행

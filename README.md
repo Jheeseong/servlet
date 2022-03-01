@@ -1393,11 +1393,11 @@
 - HandlerAdapter = SimpleControllerHandlerAdapter
 **순서**
 1. 핸들러 매핑으로 핸들러 조회
-  - HandlerMapping을 순서대로 실행 후 핸틀러 확인
+    - HandlerMapping을 순서대로 실행 후 핸틀러 확인
 2. 핸들러 어댑터 조회
-  - HandlerAdapter의 supports()를 순서대로 호출
+    - HandlerAdapter의 supports()를 순서대로 호출
 3. 핸들러 어댑터 실행
-  - 디스패치 서블릿이 조회한 simpleControllerHandlerAdapter을 실행하면서 핸들러 정보도 함께 전달
+    - 디스패치 서블릿이 조회한 simpleControllerHandlerAdapter을 실행하면서 핸들러 정보도 함께 전달
 
 # HttpRequestHandler
 - 서블릿과 가장 유사한 형태의 핸들러
@@ -1436,14 +1436,186 @@
 
 **순서**
 1. 핸들러 어댑터 호출
-  - 핸들러 어밷터를 통행 new-form 논리 뷰 이름 획득
+    - 핸들러 어밷터를 통행 new-form 논리 뷰 이름 획득
 2. ViewResolver 호출
-  - new-form 뷰 이름으로 viewResolver를 순서대로 호출
-  - BeanNameViewResolver 는 new-form 이라는 이름의 스프링 빈으로 등록된 뷰를 확인.
-  - 없을 경우 InternalResourceViewResolver 가 호출
+    - new-form 뷰 이름으로 viewResolver를 순서대로 호출
+    - BeanNameViewResolver 는 new-form 이라는 이름의 스프링 빈으로 등록된 뷰를 확인.
+    - 없을 경우 InternalResourceViewResolver 가 호출
 3. InternalResourceViewResolver
-  - InternalResorceVIew를 반환
+    - InternalResorceVIew를 반환
 4. 뷰 - InternalResourceView
-  - InternalResourceView는 JSP처럼 forward()를 호출하여 처리할 경우 사용
+    - InternalResourceView는 JSP처럼 forward()를 호출하여 처리할 경우 사용
 5. View.render()
-  - forward()를 사용하여 JSP를 실행
+    - forward()를 사용하여 JSP를 실행
+
+# v1.14 2/28
+# 스프링 MVC
+**@RequestMapping**
+- 가장 우선순위가 높은 핸들러 매핑과 핸들러 어댑터는 RequestMappingHandlerMapping, RequestMappingHandlerAdapter
+
+**SpringMemberFormControllerV1 - 회원 등록 폼**
+
+    @Controller
+    public class SpringMemberFormControllerV1 {
+
+        @RequestMapping("/springmvc/v1/members/new-form")
+        public ModelAndView newForm() {
+            return new ModelAndView("new-form");
+        }
+    }
+    
+- @Controller : 스프링이 자동으로 스프링 빈으로 등록, 스프링 MVC에서 애노테이션 기반 컨트롤러로 인식
+- @RequestMapping : 요청 정보를 매핑, 해당 URL이 호출되면 이 메서드가 호출
+- ModelAndView : 모델과 뷰 정보를 담아서 반환
+- RequestMappingHandlerMapping은 스프링 빈 중에서 @RequestMapping 혹은 @Controller가 클래스 레벨에 붙어 있는 경우 매핑 정보로 인식
+
+**SpringMemberSaveControllerV1 - 회원 저장**
+
+    @Controller
+    public class SpringMemberSaveControllerV1 {
+
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @RequestMapping("/springmvc/v1/members/save")
+        public ModelAndView save(HttpServletRequest request, HttpServletResponse response) {
+
+            String username = request.getParameter("username");
+            int age = Integer.parseInt(request.getParameter("age"));
+
+            Member member = new Member(username, age);
+            System.out.println("member = " + member);
+
+            memberRepository.save(member);
+
+            ModelAndView mv = new ModelAndView("save-result");
+            mv.addObject("member", member);
+            return mv;
+        }
+    }
+    
+- mv.addObject("member", member)
+  - 모델 데이터를 추가할 때 사용하였으며, 이 데이터는 뷰를 렌더링할 때 사용
+
+**SpringMemberListControllerV1 - 회원 목록**
+
+    @Controller
+    public class SpringMemberListControllerV1 {
+
+        MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @RequestMapping("/springmvc/v1/members")
+        public ModelAndView List() {
+
+            List<Member> members = memberRepository.findAll();
+
+            ModelAndView mv = new ModelAndView("members");
+            mv.addObject("members", members);
+            return mv;
+        }
+    }
+    
+# 스프링 MVC - 컨트롤러 통합
+- 메서드 단위로 적용된 @RequestMapping을 통합
+
+**SpringMemberControllerV2**
+
+    @Controller
+    @RequestMapping("/springmvc/v2/members")
+    public class SpringMemberControllerV2 {
+
+        MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @RequestMapping("/new-form")
+        public ModelAndView newForm() {
+            return new ModelAndView("new-form");
+        }
+
+        @RequestMapping("/save")
+        public ModelAndView save(HttpServletRequest request, HttpServletResponse response) {
+
+            String username = request.getParameter("username");
+            int age = Integer.parseInt(request.getParameter("age"));
+
+            Member member = new Member(username, age);
+            System.out.println("member = " + member);
+
+            memberRepository.save(member);
+
+            ModelAndView mv = new ModelAndView("save-result");
+            mv.addObject("member", member);
+            return mv;
+        }
+
+        @RequestMapping
+        public ModelAndView List() {
+
+            List<Member> members = memberRepository.findAll();
+
+            ModelAndView mv = new ModelAndView("members");
+            mv.addObject("members", members);
+            return mv;
+        }
+    }
+    
+- @RequestMapping의 url에 중복되는 부분을 클래스 레벨에 적용하면서 조합이 가능
+
+    @Controller
+    @RequestMapping("/springmvc/v2/members")
+    public class SpringMemberControllerV2 {}
+    
+**조합 결과**
+- 클래스 레벨 @RequestMapping("/springmvc/v2/members")
+  - 메서드 레벨 @RequestMapping("/new-form") -> /springmvc/v2/members/new-form
+  - 메서드 레벨 @RequestMapping("/save") -> /springmvc/v2/members/save
+  - 메서드 레벨 @RequestMapping -> /springmvc/v2/members
+
+# 스프링 MVC - 실용적인 방식
+
+    @Controller
+    @RequestMapping("/springmvc/v3/members")
+    public class SpringMemberControllerV3 {
+
+        MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @GetMapping("/new-form")
+        public String newForm() {
+            return "new-form";
+        }
+
+        @PostMapping("/save")
+        public String save(@RequestParam("username") String username,
+                           @RequestParam("age") int age,
+                           Model model) {
+
+            Member member = new Member(username, age);
+            System.out.println("member = " + member);
+
+            memberRepository.save(member);
+
+            model.addAttribute("member", member);
+            return "save-result";
+        }
+
+        @GetMapping
+        public String List(Model model) {
+
+            List<Member> members = memberRepository.findAll();
+
+            model.addAttribute("members", members);
+
+            return "members";
+        }
+    }
+    
+**Model 파라미터**
+- save(), members()는 Model의 파라미터를 받아서 적용
+
+**ViewName 직접 반환**
+- Spring을 통해 뷰의 논리 이름을 반환
+
+**@RequestParam 사용**
+- Http 요청 파라미터를 @RequestParam 애노테이션을 통해 받음
+
+**RequestMapping -> GetMapping, PostMapping**
+- Http Method로 구분을 하면서 url을 매칭 -> @RequestMapping(value = "/new-form", method = RequestMethod.GET)
+- 더 편리한 GetMapping, PostMapping 등을 사용
